@@ -11,13 +11,18 @@ export const Mutation ={
       const collection_ing = db.collection("ingredientes");
       const collection_rec = db.collection("recetas");
 
-      const recipes= await collection_rec.find({}).toArray();
-      const arr = recipes.filter(r => r.ingredients.some((i: string) => i === name));
-
+      // const recipes= await collection_rec.find({}).toArray();
+      // const arr = recipes.filter(r => r.ingredients.some((i: string) => i === name));
+      const field = "name";
+      const query = {
+        ingredients: {name: name}
+      }
+      const recipes = await collection_rec.distinct(field,query);
+      
       await collection_ing
       .insertOne({
         "name": name,
-        "recipes": arr
+        "recipes": recipes
       });
 
       //res.status(200);
@@ -31,12 +36,21 @@ export const Mutation ={
 
       await collection_ing.deleteOne({name:name});
 
-      const recipes= await collection_rec.find({}).toArray();
-      const arr = recipes.filter(r => r.ingredients.some((i: string) => i === name));
-
-      for(let i = 0; i < arr.length; i++){
-        await collection_rec.deleteMany({name : arr[i].name});
+      // const recipes= await collection_rec.find({}).toArray();
+      // const arr = recipes.filter(r => r.ingredients.some((i: string) => i === name));
+      const field = "name";
+      const query = {
+        ingredients: {name: name}
       }
+      const recipes = await collection_rec.distinct(field,query);
+
+      // for(let i = 0; i < recipes.length; i++){
+      //   await collection_rec.deleteMany({name : recipes[i].name});
+      // }
+      recipes.forEach(async (r:string) =>{
+        await collection_rec.deleteMany({name : r});
+      })
+      
       return "delete Ingredient";
   },
 

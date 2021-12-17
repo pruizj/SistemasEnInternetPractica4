@@ -104,7 +104,7 @@ export const Mutation ={
     return "delete Ingredient";
   },
 
-  addRecipe: async (parent:any, {name,description, ingredients}:{name:string,description:string,ingredients:[ObjectId]}, {db,user}:{db:Db,user:any}) => {
+  addRecipe: async (parent:any, {name,description, ingredients}:{name:string,description:string,ingredients:[string]}, {db,user}:{db:Db,user:any}) => {
 
     await db.collection("recetas").insertOne({
       name: name,

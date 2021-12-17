@@ -1,13 +1,14 @@
 import {ApolloError, ApolloServer} from "apollo-server";
 import { typeDefs } from "./schema";
-import {Query} from "./resolvers/query";
+import {Query,Recipe} from "./resolvers/query";
 import {Mutation} from "./resolvers/mutation";
 import { connectDB } from "./mongo";
 const config = require('./config.js');
 
 const resolvers = {
   Query,
-  Mutation
+  Mutation,
+  Recipe,
 }
 
 const run =async () => {

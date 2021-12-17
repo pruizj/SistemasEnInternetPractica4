@@ -4,11 +4,10 @@ export const typeDefs = gql`
 type Ingredient{
   _id: ID!
   name: String!
-  recipes: [Recipe!]!
 }
 
 input IngredientInput{
-  name:String!
+  _id: String!
 }
 
 type Recipe{
@@ -17,11 +16,6 @@ type Recipe{
   description: String!
   ingredients: [Ingredient!]!
   author: User!
-}
-
-input RecipeInput{
-  name:String!
-  ingredients:[ID!]!
 }
 
 type User{
@@ -33,21 +27,21 @@ type User{
 }
 
   type Query{
-    getRecipes(author:String,ingredient:String):[Recipe!]!
-    getRecipe(id:ID!): Recipe!
-    getUser(id:ID!):User!
+    getRecipes(author:String,ingredient:ID):[Recipe!]!
+    getRecipe(_id:ID!): Recipe!
+    getUser(_id:ID!):User!
     getUsers:[User!]!
-    signin:String
-    login:String
-    signout:String
-    logout:String
   }
 
   type Mutation{
+    signin(email:String!,password:String!):String
+    login(email:String!,password:String!):String
+    signout:String
+    logout:String
     addIngredient(name:String!):String
-    deleteIngredient(name:String!):String
+    deleteIngredient(_id:ID!):String
     addRecipe(name:String!, description:String!, ingredients:[IngredientInput!]!): String
     updateRecipe(nameOriginal: String!, name:String, description:String, ingredients:[IngredientInput]):String
-    deleteRecipe(name: String!):String
+    deleteRecipe(_id: ID!):String
   }
 `

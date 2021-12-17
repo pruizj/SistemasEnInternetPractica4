@@ -4,162 +4,54 @@ import { v4 as uuid } from "uuid";
 const config = require('../config');
 const bcryptjs = require('bcryptjs');
 import { connectDB } from "../mongo";
+import {typeDefs} from "../schema";
 
 export const Query ={
-    signin: async (parent:any, args:any, {collection,email,password,res}:{collection:any,email:string,password:string,res:any}) => {
+    getRecipes: async (parent:any, {author, ingredient}:{author:string,ingredient:string}, {db}:{db:Db}) => {
         
-        if(email == null || password == null){
-            res.status(403);
-            return "No headers";
+        if(author){
+            return await db.collection("recetas").find({author: author}).toArray();
         }
-
-        const user = await collection.findOne({ email: email });
-        if (user) {
-          res.status(403);
-          return "User already exists";
+        if(ingredient){
+            const recipes = await db.collection("recetas").find({ingredients : [{_id: ingredient}]}).toArray();
+            
+            return recipes;
         }
-    
-        const hash_password = await bcryptjs.hash(password, config.BCRYPT_SALT);
-        await collection
-          .insertOne({
-            "email": email,
-            "pwd": hash_password,
-            "token": undefined,
-            "recipes": []
-          });
-    
-        res.status(200);
-        return "You've been register";
-    
-      },
-    
-    login: async (parent:any, args:any, {collection,email,password,res}:{collection:any,email:string,password:string,res:any}) => {
-        const token_key: string = uuid();
-
-        if(email == null || password == null){
-            res.status(403);
-            return "No headers";
-        }
-
-        const user = await collection.findOne({ email: email });
-        if (!user) {
-            res.status(403);
-            return "User does not exist";
-        }
-        
-        const isMatch = await bcryptjs.compare(password, user.pwd)
-        if(isMatch){
-            const filter = { email: email };
-            const updateDoc = {
-                $set: {
-                token: token_key
-                }
-            };
-            await collection.updateOne(filter, updateDoc);
-
-            res.status(200);
-            return token_key;
-        }
-        res.status(403);
-        return "Incorrect password";
+        return await db.collection("recetas").find({}).toArray();
     },
 
-    signout: async (parent:any, args:any, {collection,token,res}:{collection:any,token:string,res:any}) => {
-        if(token == null){
-            res.status(403);
-            return "No headers";
-        }
+    getRecipe: async (parent:any, {_id}:{_id:string}, {db}:{db:Db}) => {
+        const recipe = await db.collection("recetas").findOne({_id: new ObjectId(_id)});
 
-        const user = await collection.findOne({ token: token });
-        if (!user) {
-            res.status(403);
-            return "User does not exist";
-        }
-
-        await collection.deleteOne({ token: token });
-        res.status(200);
-        return "User delete";
+        if(!recipe) throw new ApolloError("Recipe does not exist", "403");
+        return recipe;
     },
 
-    logout: async (parent:any, args:any, {collection,token,res}:{collection:any,token:string,res:any}) => {
-      
-        if (token == null) {
-          res.status(500);
-          return "No token";
-        }
-      
-        const user = await collection.findOne({ token: token });
-        if (!user) {
-          res.status(500);
-          return "Error, failed to logout";
-        }
-      
-        const filter = { token: token };
-        const updateDoc = {
-          $set: {
-            token: undefined
-          }
-        };
-        await collection.updateOne(filter, updateDoc);
-      
-        res.status(200);
-        return "You have logged out";
+    getUser: async (parent:any, {_id}:{_id:string}, {db}:{db:Db}) => {
+        
+        const user = await db.collection("usuarios").findOne({_id: new ObjectId(_id)});
+        if(!user) throw new ApolloError("User does not exist", "403");
+        return user;
+    },
+
+    getUsers: async (parent:any, args:any, {db}:{db:Db}) => {
+        
+        return await db.collection("usuarios").find({}).toArray();
     },
   
-    getRecipes: async (parent:any, {author, ingredient}:{author:string,ingredient:string}, {res}:{res:any}) => {
-      const db = await connectDB();
-      const collection_rec = db.collection("recetas");
-      const recipes = await collection_rec.find({}).toArray();
-      return recipes;
-    },
-
-    getRecipe: async (parent:any, {id}:{id:string}, {res}:{res:any}) => {
-      const db = await connectDB();
-      const collection_rec = db.collection("recetas");
-      const recipe = await collection_rec.findOne({_id: new ObjectId(id)});
-      if(recipe){
-        return recipe;
-      }else{
-        return "Recipe does not exist";
-      }
-    },
-
-    getUser: async (parent:any, {id}:{id:string}, {res}:{res:any}) => {
-      const db = await connectDB();
-      const collection = db.collection("usuarios");
-      const user = await collection.findOne({_id: new ObjectId(id)});
-      if(user){
-        return user;
-      }else{
-        return "Recipe does not exist";
-      }
-    },
-
-    getUsers: async (parent:any, args:any, {res}:{res:any}) => {
-      const db = await connectDB();
-      const collection = db.collection("usuarios");
-      const users = await collection.find({}).toArray();
-      if(users){
-        return users;
-      }else{
-        return "Recipe does not exist";
-      }
-    },
 }
 
-export const Recipe = {
-  ingredients: (parent:{ingredients: number[]}, args:any, {ingredients}: {ingredients:any}) => {
-      console.log("Ingredientes");
-      return parent.ingredients.map((index)=> ({
-          name: ingredients[index].name,
-          _id: index,
-          recipes : ingredients[index].recipes
-      }))
-  }
-}
+export const Recipe =  {
+    
+    ingredients: async (parent:{ingredients: any[]}, args:any, {db}: {db:Db}) => {
+        console.log("hola");
+        return parent.ingredients.map(async (id)=> ({
+            _id: id,
+            name: await db.collection("ingredientes").findOne({_id:id})
+        }))
+    },
 
-export const Ingredient = {
-  recipes:(parent: {_id:number, name:string}, args:any, {recipes}:{recipes:any}) =>{
-      return recipes.filter((r: { ingredients: any[]; }) => r.ingredients.some((i:number) => r.ingredients[i].name === parent.name));
-  }
+    author:  async (parent:{user: string}, args:any, {db}: {db:Db}) =>{
+        return db.collection("usuarios").findOne({email: parent.user}); 
+    }
 }
